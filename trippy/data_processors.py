@@ -58,20 +58,21 @@ class Woz2Processor(DataProcessor):
 
 
 class Multiwoz21Processor(DataProcessor):
-    def get_train_examples(self, data_dir, args):
-        return dataset_multiwoz21.create_examples(os.path.join(data_dir, 'train_dials.json'),
+    def get_train_examples(self, data_dir, is_fewshot, args):
+        fewshot_config = "_fewshot" if is_fewshot else ""
+        return dataset_multiwoz21.create_examples(os.path.join(data_dir, f'train_dials{fewshot_config}.json'),
                                                   os.path.join(data_dir, 'dialogue_acts.json'),
                                                   'train', self.slot_list, self.label_maps, **args)
-
-    def get_dev_examples(self, data_dir, args):
-        return dataset_multiwoz21.create_examples(os.path.join(data_dir, 'val_dials.json'),
+    def get_dev_examples(self, data_dir, is_fewshot, args):
+        fewshot_config = "_fewshot" if is_fewshot else ""
+        return dataset_multiwoz21.create_examples(os.path.join(data_dir, f'val_dials{fewshot_config}.json'),
                                                   os.path.join(data_dir, 'dialogue_acts.json'),
-                                                  'dev', self.slot_list, self.label_maps, **args)
-
-    def get_test_examples(self, data_dir, args):
-        return dataset_multiwoz21.create_examples(os.path.join(data_dir, 'test_dials.json'),
+                                                  'train', self.slot_list, self.label_maps, **args)
+    def get_test_examples(self, data_dir, is_fewshot, args):
+        fewshot_config = "_fewshot" if is_fewshot else ""
+        return dataset_multiwoz21.create_examples(os.path.join(data_dir, f'test_dials{fewshot_config}.json'),
                                                   os.path.join(data_dir, 'dialogue_acts.json'),
-                                                  'test', self.slot_list, self.label_maps, **args)
+                                                  'train', self.slot_list, self.label_maps, **args)
 
 
 class SimProcessor(DataProcessor):

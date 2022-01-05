@@ -30,6 +30,7 @@ import re
 
 import numpy as np
 import torch
+from torch._C import device
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler)
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
@@ -476,8 +477,11 @@ def load_and_cache_examples(args, model, tokenizer, processor, evaluate=False):
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
     # Load data features from cache or dataset file
-    cached_file = os.path.join(os.path.dirname(args.output_dir), 'cached_{}_features'.format(
-        args.predict_type if evaluate else ('train_few' if 'few' in args.output_dir else 'train')))
+    split_type =  args.predict_type if evaluate else 'train'
+    is_fewshot = "_fewshot_" if args.fewshot else ""
+    cached_file = os.path.join(args.data_dir, f'cached_{split_type}_{is_fewshot}features')
+    print(cached_file)
+    print(os.path.exists(cached_file))
     if os.path.exists(cached_file) and not args.overwrite_cache: # and not output_examples:
         logger.info("Loading features from cached file %s", cached_file)
         features = torch.load(cached_file)
@@ -489,11 +493,11 @@ def load_and_cache_examples(args, model, tokenizer, processor, evaluate=False):
                           'label_value_repetitions': args.label_value_repetitions,
                           'delexicalize_sys_utts': args.delexicalize_sys_utts}
         if evaluate and args.predict_type == "dev":
-            examples = processor.get_dev_examples(args.data_dir, processor_args)
+            examples = processor.get_dev_examples(args.data_dir, args.fewshot, processor_args)
         elif evaluate and args.predict_type == "test":
-            examples = processor.get_test_examples(args.data_dir, processor_args)
+            examples = processor.get_test_examples(args.data_dir, args.fewshot, processor_args)
         else:
-            examples = processor.get_train_examples(args.data_dir, processor_args)
+            examples = processor.get_train_examples(args.data_dir, args.fewshot, processor_args)
         features = convert_examples_to_features(examples=examples,
                                                 slot_list=model.slot_list,
                                                 class_types=model.class_types,
@@ -560,6 +564,7 @@ def mask_tokens(inputs, tokenizer, mlm_probability=0.15):
     indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
     random_words = torch.randint(tokenizer.vocab_size, labels.shape, dtype=torch.long)
     inputs[indices_random] = random_words[indices_random].cuda()
+    # inputs[indices_random] = random_words[indices_random]
 
     # The rest of the time (10% of the time) we keep the masked input tokens unchanged
     return inputs, labels
@@ -682,6 +687,10 @@ def main():
     parser.add_argument('--fp16_opt_level', type=str, default='O1',
                         help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
                              "See details at https://nvidia.github.io/apex/amp.html")
+
+    # custom arguments
+    parser.add_argument('--fewshot', action='store_true',
+                        help="Whether to use fewshot dataset")
 
     args = parser.parse_args()
 
