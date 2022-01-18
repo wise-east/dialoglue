@@ -549,20 +549,21 @@ def mask_tokens(inputs, tokenizer, mlm_probability=0.15):
     """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
     labels = inputs.clone().detach()
     # We sample a few tokens in each sequence for masked-LM training (with probability args.mlm_probability defaults to 0.15 in Bert/RoBERTa)
-    probability_matrix = torch.full(labels.shape, mlm_probability)
+    probability_matrix = torch.full(labels.shape, mlm_probability).cuda()
     #special_tokens_mask = [tokenizer.get_special_tokens_mask(val, already_has_special_tokens=True) for val in labels.tolist()]
+    # logger.info(f"{probability_matrix.device}, {labels.device}")
     probability_matrix.masked_fill_(torch.tensor(labels == 0, dtype=torch.bool), value=0.0)
 
-    masked_indices = torch.bernoulli(probability_matrix).bool()
+    masked_indices = torch.bernoulli(probability_matrix).bool().cuda()
     labels[~masked_indices] = -1  # We only compute loss on masked tokens
 
     # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
-    indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).bool() & masked_indices
+    indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).bool().cuda() & masked_indices
     inputs[indices_replaced] = tokenizer.mask_token_id
 
     # 10% of the time, we replace masked input tokens with random word
-    indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
-    random_words = torch.randint(tokenizer.vocab_size, labels.shape, dtype=torch.long)
+    indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool().cuda() & masked_indices & ~indices_replaced
+    random_words = torch.randint(tokenizer.vocab_size, labels.shape, dtype=torch.long).cuda()
     inputs[indices_random] = random_words[indices_random].cuda()
     # inputs[indices_random] = random_words[indices_random]
 
@@ -593,8 +594,6 @@ def main():
                         help="Pretrained config name or path if not the same as model_name")
     parser.add_argument("--tokenizer_name", default="", type=str,
                         help="Pretrained tokenizer name or path if not the same as model_name")
-    parser.add_argument("--few_shot", action='store_true',
-                        help="Whether to run few-shot training.")
 
     parser.add_argument("--max_seq_length", default=384, type=int,
                         help="Maximum input length after tokenization. Longer sequences will be truncated, shorter ones padded.")
@@ -689,8 +688,8 @@ def main():
                              "See details at https://nvidia.github.io/apex/amp.html")
 
     # custom arguments
-    parser.add_argument('--fewshot', action='store_true',
-                        help="Whether to use fewshot dataset")
+    parser.add_argument('--fewshot', default=False, type=bool,
+                        help="Whether to use fewshot data")
 
     args = parser.parse_args()
 
@@ -727,6 +726,10 @@ def main():
     logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
                    args.local_rank, device, args.n_gpu, bool(args.local_rank != -1), args.fp16)
 
+    logger.info(f"args.fewshot: {args.fewshot}, type: {type(args.fewshot)}")
+    # args.fewshot = args.fewshot == "True"
+    args.fewshot = True 
+    logger.info(f"Use fewshot: {args.fewshot}")
     # Set seed
     set_seed(args)
 
@@ -758,6 +761,8 @@ def main():
     if args.local_rank == 0:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 
+    logger.info(args.fewshot)
+    logger.info(args.device)
     model.to(args.device)
 
     logger.info("Training/evaluation parameters %s", args)

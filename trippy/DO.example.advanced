@@ -2,7 +2,7 @@
 
 #SBATCH --partition=a100 
 #SBATCH --gres=gpu:1
-#SBATCH --time=24:00:00 # run for one day
+#SBATCH --time=12:00:00 # run for one day
 #SBATCH --cpus-per-task=10
 #SBATCH --job-name=dialoglue
 
@@ -33,16 +33,16 @@ BASE_PATH="/data/home/justincho/trippy-public-master/convbert-dg"
 SEED=$1
 
 # # # FEWSHOT parameters
-# FEWSHOT=True
-# N_EPOCHS=20
-# PER_GPU_TRAIN_BATCH_SIZE=4
-# SAVE_EPOCHS=2
+FEWSHOT="True"
+N_EPOCHS=20
+PER_GPU_TRAIN_BATCH_SIZE=4
+SAVE_EPOCHS=2
 
 # # # FULLSHOT Parameters
-FEWSHOT=False
-N_EPOCHS=10
-PER_GPU_TRAIN_BATCH_SIZE=24
-SAVE_EPOCHS=1 
+# FEWSHOT=False
+# N_EPOCHS=40
+# PER_GPU_TRAIN_BATCH_SIZE=24
+# SAVE_EPOCHS=2
 
 
 # Project paths etc. ----------------------------------------------
@@ -86,7 +86,7 @@ for step in train dev test; do
 	    --eval_all_checkpoints \
 	    --adam_epsilon=1e-6 \
 	    --label_value_repetitions \
-            --swap_utterances \
+        --swap_utterances \
 	    --append_history \
 	    --use_history_labels \
 	    --delexicalize_sys_utts \
@@ -95,9 +95,10 @@ for step in train dev test; do
 	    --seed $SEED \
 	    --mlm_pre \
 	    --mlm_during \
-		--fewshot \
 	    ${args_add} \
         2>&1 | tee ${OUT_DIR}/${step}.log
+
+		# --fewshot $FEWSHOT \
 
     if [ "$step" = "dev" ] || [ "$step" = "test" ]; then
     	python3 metric_bert_dst.py \
