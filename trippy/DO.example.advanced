@@ -47,8 +47,8 @@ SAVE_EPOCHS=2
 
 # Project paths etc. ----------------------------------------------
 
-# OUT_DIR=results/multiwoz_trippy_sd${SEED}_fewshot_${FEWSHOT}_${NOW}/
-OUT_DIR=results/multiwoz_trippy_convbert_sd${SEED}_fewshot_${FEWSHOT}_${NOW}/
+# OUT_DIR=results/multiwoz_trippy_sd${SEED}_fewshot_${FEWSHOT}_${NOW}
+OUT_DIR=results/multiwoz_trippy_convbert_sd${SEED}_fewshot_${FEWSHOT}_${NOW}
 # OUT_DIR=/data/home/justincho/dialoglue/trippy/results/multiwoz_trippy_2021-12-08_01:45:08
 # OUT_DIR=/data/home/justincho/dialoglue/trippy/results/multiwoz_trippy_2021-12-08_01:45:07
 # OUT_DIR=/data/home/justincho/dialoglue/trippy/results/multiwoz_trippy_2021-12-07_22:44:38
